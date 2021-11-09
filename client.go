@@ -190,6 +190,14 @@ func (client *Client) Post(dn, data string, mods ...func(*Req)) (Res, error) {
 	return client.Do(req)
 }
 
+// Put makes a PUT request and returns a GJSON result.
+// Hint: Use the Body struct to easily create PUT body data.
+func (client *Client) Put(dn, data string, mods ...func(*Req)) (Res, error) {
+	client.Authenticate()
+	req := client.NewReq("PUT", fmt.Sprintf("/api/mo/%s", dn), strings.NewReader(data), mods...)
+	return client.Do(req)
+}
+
 // Login authenticates to the NXOS device.
 func (client *Client) Login() error {
 	data := fmt.Sprintf(`{"aaaUser":{"attributes":{"name":"%s","pwd":"%s"}}}`,
