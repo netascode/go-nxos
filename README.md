@@ -1,3 +1,5 @@
+[![Tests](https://github.com/netascodego-nxos/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/go-nxos/actions/workflows/test.yml)
+
 # go-nxos
 
 `go-nxos` is a Go client library for Cisco NX-OS devices. It is based on Nathan's excellent [goaci](https://github.com/brightpuddle/goaci) module and features a simple, extensible API and [advanced JSON manipulation](#result-manipulation).
@@ -26,6 +28,7 @@ func main() {
 ```
 
 This will print:
+
 ```
 eth1/1
 ```
