@@ -1,4 +1,4 @@
-[![Tests](https://github.com/netascodego-nxos/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/go-nxos/actions/workflows/test.yml)
+[![Tests](https://github.com/netascode/go-nxos/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/go-nxos/actions/workflows/test.yml)
 
 # go-nxos
 
