@@ -180,7 +180,7 @@ func (client *Client) Do(req Req) (Res, error) {
 		}
 		res = Res(gjson.ParseBytes(bodyBytes))
 		if req.LogPayload {
-			log.Printf("[DEBUG] HTTP Response: %s", body)
+			log.Printf("[DEBUG] HTTP Response: %s", res.Raw)
 		}
 
 		if (httpRes.StatusCode < 500 || httpRes.StatusCode > 504) && httpRes.StatusCode != 405 {
@@ -200,8 +200,8 @@ func (client *Client) Do(req Req) (Res, error) {
 
 	errCode := res.Get("imdata.0.error.attributes.code").Str
 	if errCode != "" {
-		log.Printf("[ERROR] JSON error: %v", errCode)
-		return res, fmt.Errorf("JSON error: %v", errCode)
+		log.Printf("[ERROR] JSON error: %s", res.Raw)
+		return res, fmt.Errorf("JSON error: %s", res.Raw)
 	}
 	return res, nil
 }

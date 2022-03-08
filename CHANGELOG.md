@@ -1,3 +1,7 @@
+## 0.2.1
+
+- Fix response debug and error message
+
 ## 0.2.0
 
 - Suppress logging of sensitive payloads (authentication)
