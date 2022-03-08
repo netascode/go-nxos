@@ -17,7 +17,7 @@ const (
 )
 
 func testClient() Client {
-	client, _ := NewClient(testURL, "usr", "pwd", true)
+	client, _ := NewClient(testURL, "usr", "pwd", true, MaxRetries(0))
 	client.LastRefresh = time.Now()
 	gock.InterceptClient(client.HttpClient)
 	return client
@@ -215,5 +215,39 @@ func TestClientPost(t *testing.T) {
 			return res
 		})
 	_, err = client.Post("/url", "{}")
+	assert.Error(t, err)
+}
+
+// TestClientPost tests the Client::Post method.
+func TestClientPut(t *testing.T) {
+	defer gock.Off()
+	client := testClient()
+
+	var err error
+
+	// Success
+	gock.New(testURL).Put("/url.json").Reply(200)
+	_, err = client.Put("/url", "{}")
+	assert.NoError(t, err)
+
+	// HTTP error
+	gock.New(testURL).Put("/url.json").ReplyError(errors.New("fail"))
+	_, err = client.Put("/url", "{}")
+	assert.Error(t, err)
+
+	// Invalid HTTP status code
+	gock.New(testURL).Put("/url.json").Reply(405)
+	_, err = client.Put("/url", "{}")
+	assert.Error(t, err)
+
+	// Error decoding response body
+	gock.New(testURL).
+		Put("/url.json").
+		Reply(200).
+		Map(func(res *http.Response) *http.Response {
+			res.Body = ioutil.NopCloser(ErrReader{})
+			return res
+		})
+	_, err = client.Put("/url", "{}")
 	assert.Error(t, err)
 }

@@ -42,12 +42,20 @@ type Req struct {
 	// Refresh indicates whether token refresh should be checked for this request.
 	// Pass NoRefresh to disable Refresh check.
 	Refresh bool
+	// LogPayload indicates whether logging of payloads should be enabled.
+	LogPayload bool
 }
 
 // NoRefresh prevents token refresh check.
 // Primarily used by the Login and Refresh methods where this would be redundant.
 func NoRefresh(req *Req) {
 	req.Refresh = false
+}
+
+// NoLogPayload prevents logging of payloads.
+// Primarily used by the Login and Refresh methods where this could expose secrets.
+func NoLogPayload(req *Req) {
+	req.LogPayload = false
 }
 
 // Query sets an HTTP query parameter.
