@@ -23,14 +23,24 @@ const DefaultBackoffMinDelay int = 4
 const DefaultBackoffMaxDelay int = 60
 const DefaultBackoffDelayFactor float64 = 3
 
+// ClientUrl stores URL specific parameters
+type ClientUrl struct {
+	// Url is the NXOS device IP or hostname, e.g. https://10.0.0.1:443 (port is optional).
+	Url string
+	// LastRefresh is the timestamp of the last token refresh interval.
+	LastRefresh time.Time
+	// Token is the current authentication token
+	Token string
+}
+
 // Client is an HTTP NXOS NX-API client.
 // Use nxos.NewClient to initiate a client.
 // This will ensure proper cookie handling and processing of modifiers.
 type Client struct {
 	// HttpClient is the *http.Client used for API requests.
 	HttpClient *http.Client
-	// Url is the NXOS device IP or hostname, e.g. https://10.0.0.1:443 (port is optional).
-	Url string
+	// List of URLs.
+	Urls []ClientUrl
 	// Usr is the NXOS device username.
 	Usr string
 	// Pwd is the NXOS device password.
@@ -45,10 +55,6 @@ type Client struct {
 	BackoffMaxDelay int
 	// Backoff delay factor
 	BackoffDelayFactor float64
-	// LastRefresh is the timestamp of the last token refresh interval.
-	LastRefresh time.Time
-	// Token is the current authentication token
-	Token string
 }
 
 // NewClient creates a new NXOS HTTP client.
@@ -66,17 +72,23 @@ func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (Clie
 		Jar:       cookieJar,
 	}
 
-	client := Client{
-		HttpClient: &httpClient,
-		Url:        url,
-		Usr:        usr,
-		Pwd:        pwd,
-		Insecure:   insecure,
+	url1 := ClientUrl{
+		Url: url,
 	}
-	client.MaxRetries = DefaultMaxRetries
-	client.BackoffMinDelay = DefaultBackoffMinDelay
-	client.BackoffMaxDelay = DefaultBackoffMaxDelay
-	client.BackoffDelayFactor = DefaultBackoffDelayFactor
+
+	client := Client{
+		HttpClient:         &httpClient,
+		Usr:                usr,
+		Pwd:                pwd,
+		Insecure:           insecure,
+		MaxRetries:         DefaultMaxRetries,
+		BackoffMinDelay:    DefaultBackoffMinDelay,
+		BackoffMaxDelay:    DefaultBackoffMaxDelay,
+		BackoffDelayFactor: DefaultBackoffDelayFactor,
+	}
+
+	client.Urls = append(client.Urls, url1)
+
 	for _, mod := range mods {
 		mod(&client)
 	}
@@ -120,7 +132,7 @@ func BackoffDelayFactor(x float64) func(*Client) {
 
 // NewReq creates a new Req request for this client.
 func (client Client) NewReq(method, uri string, body io.Reader, mods ...func(*Req)) Req {
-	httpReq, _ := http.NewRequest(method, client.Url+uri+".json", body)
+	httpReq, _ := http.NewRequest(method, client.Urls[0].Url+uri+".json", body)
 	req := Req{
 		HttpReq:    httpReq,
 		Refresh:    true,
@@ -128,6 +140,9 @@ func (client Client) NewReq(method, uri string, body io.Reader, mods ...func(*Re
 	}
 	for _, mod := range mods {
 		mod(&req)
+	}
+	if req.OverrideUrl != "" {
+		req.HttpReq, _ = http.NewRequest(method, req.OverrideUrl+uri+".json", body)
 	}
 	return req
 }
@@ -224,8 +239,8 @@ func (client *Client) Do(req Req) (Res, error) {
 //    ]
 //  }
 func (client *Client) Get(path string, mods ...func(*Req)) (Res, error) {
-	client.Authenticate()
 	req := client.NewReq("GET", path, nil, mods...)
+	client.Authenticate(&req)
 	return client.Do(req)
 }
 
@@ -242,7 +257,6 @@ func (client *Client) Get(path string, mods ...func(*Req)) (Res, error) {
 //    }
 //  ]
 func (client *Client) GetClass(class string, mods ...func(*Req)) (Res, error) {
-	client.Authenticate()
 	res, err := client.Get(fmt.Sprintf("/api/class/%s", class), mods...)
 	if err != nil {
 		return res, err
@@ -261,7 +275,6 @@ func (client *Client) GetClass(class string, mods ...func(*Req)) (Res, error) {
 //    }
 //  }
 func (client *Client) GetDn(dn string, mods ...func(*Req)) (Res, error) {
-	client.Authenticate()
 	res, err := client.Get(fmt.Sprintf("/api/mo/%s", dn), mods...)
 	if err != nil {
 		return res, err
@@ -271,40 +284,40 @@ func (client *Client) GetDn(dn string, mods ...func(*Req)) (Res, error) {
 
 // DeleteDn makes a DELETE request by DN.
 func (client *Client) DeleteDn(dn string, mods ...func(*Req)) (Res, error) {
-	client.Authenticate()
 	req := client.NewReq("DELETE", fmt.Sprintf("/api/mo/%s", dn), nil, mods...)
+	client.Authenticate(&req)
 	return client.Do(req)
 }
 
 // Post makes a POST request and returns a GJSON result.
 // Hint: Use the Body struct to easily create POST body data.
 func (client *Client) Post(dn, data string, mods ...func(*Req)) (Res, error) {
-	client.Authenticate()
 	req := client.NewReq("POST", fmt.Sprintf("/api/mo/%s", dn), strings.NewReader(data), mods...)
+	client.Authenticate(&req)
 	return client.Do(req)
 }
 
 // Put makes a PUT request and returns a GJSON result.
 // Hint: Use the Body struct to easily create PUT body data.
 func (client *Client) Put(dn, data string, mods ...func(*Req)) (Res, error) {
-	client.Authenticate()
 	req := client.NewReq("PUT", fmt.Sprintf("/api/mo/%s", dn), strings.NewReader(data), mods...)
+	client.Authenticate(&req)
 	return client.Do(req)
 }
 
 // Login authenticates to the NXOS device.
-func (client *Client) Login() error {
+func (client *Client) Login(url *ClientUrl) error {
 	data := fmt.Sprintf(`{"aaaUser":{"attributes":{"name":"%s","pwd":"%s"}}}`,
 		client.Usr,
 		client.Pwd,
 	)
-	req := client.NewReq("POST", "/api/aaaLogin", strings.NewReader(data), NoRefresh, NoLogPayload)
+	req := client.NewReq("POST", "/api/aaaLogin", strings.NewReader(data), NoRefresh, NoLogPayload, OverrideUrl(url.Url))
 	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}
-	client.Token = res.Get("imdata.0.aaaLogin.attributes.token").Str
-	client.LastRefresh = time.Now()
+	url.Token = res.Get("imdata.0.aaaLogin.attributes.token").Str
+	url.LastRefresh = time.Now()
 	return nil
 }
 
@@ -312,22 +325,40 @@ func (client *Client) Login() error {
 // Note that this will be handled automatically be default.
 // Refresh will be checked every request and the token will be refreshed after 8 minutes.
 // Pass nxos.NoRefresh to prevent automatic refresh handling and handle it directly instead.
-func (client *Client) Refresh() error {
-	res, err := client.Get("/api/aaaRefresh", NoRefresh, NoLogPayload)
+func (client *Client) Refresh(url *ClientUrl) error {
+	res, err := client.Get("/api/aaaRefresh", NoRefresh, NoLogPayload, OverrideUrl(url.Url))
 	if err != nil {
 		return err
 	}
-	client.Token = res.Get("imdata.0.aaaRefresh.attributes.token").Str
-	client.LastRefresh = time.Now()
+	url.Token = res.Get("imdata.0.aaaRefresh.attributes.token").Str
+	url.LastRefresh = time.Now()
 	return nil
 }
 
+// urlLookup is a helper to find a url or create it
+func (client *Client) urlLookup(url string) *ClientUrl {
+	for _, u := range client.Urls {
+		if u.Url == url {
+			return &u
+		}
+	}
+	c := ClientUrl{Url: url}
+	client.Urls = append(client.Urls, c)
+	return &c
+}
+
 // Login if no token available or refresh the token if older than 480 seconds.
-func (client *Client) Authenticate() error {
-	if client.Token == "" {
-		return client.Login()
-	} else if time.Since(client.LastRefresh) > 480*time.Second {
-		return client.Refresh()
+func (client *Client) Authenticate(req *Req) error {
+	var u *ClientUrl
+	if req.OverrideUrl != "" {
+		u = client.urlLookup(req.OverrideUrl)
+	} else {
+		u = &(client.Urls[0])
+	}
+	if u.Token == "" {
+		return client.Login(u)
+	} else if time.Since(u.LastRefresh) > 480*time.Second {
+		return client.Refresh(u)
 	} else {
 		return nil
 	}

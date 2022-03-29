@@ -44,6 +44,8 @@ type Req struct {
 	Refresh bool
 	// LogPayload indicates whether logging of payloads should be enabled.
 	LogPayload bool
+	// OverrideUrl indicates a URL to use instead
+	OverrideUrl string
 }
 
 // NoRefresh prevents token refresh check.
@@ -69,5 +71,12 @@ func Query(k, v string) func(req *Req) {
 		q := req.HttpReq.URL.Query()
 		q.Add(k, v)
 		req.HttpReq.URL.RawQuery = q.Encode()
+	}
+}
+
+// OverrideUrl uses another url instead of the one when the client was created
+func OverrideUrl(url string) func(req *Req) {
+	return func(req *Req) {
+		req.OverrideUrl = url
 	}
 }
