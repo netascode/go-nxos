@@ -1,3 +1,7 @@
+## 0.2.3 (unreleased)
+
+- Add Body.Delete() method
+
 ## 0.2.2
 
 - Add url override option

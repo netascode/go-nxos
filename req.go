@@ -30,6 +30,13 @@ func (body Body) SetRaw(path, rawValue string) Body {
 	return body
 }
 
+// Delete deletes a JSON path.
+func (body Body) Delete(path string) Body {
+	res, _ := sjson.Delete(body.Str, path)
+	body.Str = res
+	return body
+}
+
 // Res creates a Res object, i.e. a GJSON result object.
 func (body Body) Res() Res {
 	return gjson.Parse(body.Str)
