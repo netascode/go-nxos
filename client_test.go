@@ -44,18 +44,18 @@ func TestClientLogin(t *testing.T) {
 
 	// Successful login
 	gock.New(testURL).Post("/api/aaaLogin.json").Reply(200)
-	assert.NoError(t, client.Login(&ClientUrl{}))
+	assert.NoError(t, client.Login(&ClientUrl{Url: testURL}))
 
 	// Invalid HTTP status code
 	gock.New(testURL).Post("/api/aaaLogin.json").Reply(405)
-	assert.Error(t, client.Login(&ClientUrl{}))
+	assert.Error(t, client.Login(&ClientUrl{Url: testURL}))
 
 	// JSON error from Client
 	gock.New(testURL).
 		Post("/api/aaaLogin.json").
 		Reply(200).
 		BodyString(Body{}.Set("imdata.0.error.attributes.code", "123").Str)
-	assert.Error(t, client.Login(&ClientUrl{}))
+	assert.Error(t, client.Login(&ClientUrl{Url: testURL}))
 }
 
 // TestClientRefresh tests the Client::Refresh method.
@@ -64,7 +64,7 @@ func TestClientRefresh(t *testing.T) {
 	client := testClient()
 
 	gock.New(testURL).Get("/api/aaaRefresh.json").Reply(200)
-	assert.NoError(t, client.Refresh(&ClientUrl{}))
+	assert.NoError(t, client.Refresh(&ClientUrl{Url: testURL}))
 }
 
 // TestClientAuthenticate tests the Client::Authenticate method.

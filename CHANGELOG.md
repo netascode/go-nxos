@@ -1,3 +1,7 @@
+## 0.2.4 (unreleased)
+
+- Fix issue when applying an override URL and query parameters to the same request
+
 ## 0.2.3
 
 - Add Body.Delete() method

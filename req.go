@@ -2,6 +2,8 @@ package nxos
 
 import (
 	"net/http"
+	neturl "net/url"
+	"strings"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -9,7 +11,8 @@ import (
 
 // Body wraps SJSON for building JSON body strings.
 // Usage example:
-//  Body{}.Set("bgpInst.attributes.asn", "100").Str
+//
+//	Body{}.Set("bgpInst.attributes.asn", "100").Str
 type Body struct {
 	Str string
 }
@@ -23,7 +26,8 @@ func (body Body) Set(path, value string) Body {
 
 // SetRaw sets a JSON path to a raw string value.
 // This is primarily used for building up nested structures, e.g.:
-//  Body{}.SetRaw("bgpInst.attributes", Body{}.Set("asn", "100").Str).Str
+//
+//	Body{}.SetRaw("bgpInst.attributes", Body{}.Set("asn", "100").Str).Str
 func (body Body) SetRaw(path, rawValue string) Body {
 	res, _ := sjson.SetRaw(body.Str, path, rawValue)
 	body.Str = res
@@ -68,11 +72,14 @@ func NoLogPayload(req *Req) {
 }
 
 // Query sets an HTTP query parameter.
+//
 //	client.GetClass("bgpInst", nxos.Query("query-target-filter", `eq(bgpInst.asn,"100")`))
+//
 // Or set multiple parameters:
-//  client.GetClass("bgpInst",
-//    nxos.Query("rsp-subtree-include", "faults"),
-//    nxos.Query("query-target-filter", `eq(bgpInst.asn,"100")`))
+//
+//	client.GetClass("bgpInst",
+//	  nxos.Query("rsp-subtree-include", "faults"),
+//	  nxos.Query("query-target-filter", `eq(bgpInst.asn,"100")`))
 func Query(k, v string) func(req *Req) {
 	return func(req *Req) {
 		q := req.HttpReq.URL.Query()
@@ -84,6 +91,19 @@ func Query(k, v string) func(req *Req) {
 // OverrideUrl uses another url instead of the one when the client was created
 func OverrideUrl(url string) func(req *Req) {
 	return func(req *Req) {
-		req.OverrideUrl = url
+		oldUrl := req.HttpReq.URL.String()
+		newUrl := ""
+		i := 0
+		for m := 1; m <= 3; m++ {
+			x := strings.Index(oldUrl[i:], "/")
+			if x < 0 {
+				break
+			}
+			i += x + 1
+			if m == 3 {
+				newUrl = oldUrl[(i - 1):]
+			}
+		}
+		req.HttpReq.URL, _ = neturl.Parse(url + newUrl)
 	}
 }
