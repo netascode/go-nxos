@@ -1,4 +1,4 @@
-## 0.2.4 (unreleased)
+## 0.2.4
 
 - Fix issue when applying an override URL and query parameters to the same request
 
