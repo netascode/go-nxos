@@ -1,4 +1,4 @@
-## 0.2.5 (unreleased)
+## 0.2.5
 
 - Fix issue with override URL and authentication
 
