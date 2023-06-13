@@ -18,7 +18,7 @@ const (
 
 func testClient() Client {
 	client, _ := NewClient(testURL, "usr", "pwd", true, MaxRetries(0))
-	client.Urls[0].LastRefresh = time.Now()
+	client.LastRefresh = time.Now()
 	gock.InterceptClient(client.HttpClient)
 	return client
 }
@@ -44,18 +44,18 @@ func TestClientLogin(t *testing.T) {
 
 	// Successful login
 	gock.New(testURL).Post("/api/aaaLogin.json").Reply(200)
-	assert.NoError(t, client.Login(&ClientUrl{Url: testURL}))
+	assert.NoError(t, client.Login())
 
 	// Invalid HTTP status code
 	gock.New(testURL).Post("/api/aaaLogin.json").Reply(405)
-	assert.Error(t, client.Login(&ClientUrl{Url: testURL}))
+	assert.Error(t, client.Login())
 
 	// JSON error from Client
 	gock.New(testURL).
 		Post("/api/aaaLogin.json").
 		Reply(200).
 		BodyString(Body{}.Set("imdata.0.error.attributes.code", "123").Str)
-	assert.Error(t, client.Login(&ClientUrl{Url: testURL}))
+	assert.Error(t, client.Login())
 }
 
 // TestClientRefresh tests the Client::Refresh method.
@@ -64,7 +64,7 @@ func TestClientRefresh(t *testing.T) {
 	client := testClient()
 
 	gock.New(testURL).Get("/api/aaaRefresh.json").Reply(200)
-	assert.NoError(t, client.Refresh(&ClientUrl{Url: testURL}))
+	assert.NoError(t, client.Refresh())
 }
 
 // TestClientAuthenticate tests the Client::Authenticate method.
@@ -73,11 +73,11 @@ func TestClientAuthenticate(t *testing.T) {
 	client := testClient()
 
 	// Force token refresh and throw an error
-	client.Urls[0].LastRefresh = time.Now().AddDate(0, 0, -1)
+	client.LastRefresh = time.Now().AddDate(0, 0, -1)
 	gock.New(testURL).
 		Get("/api/aaaRefresh.json").
 		ReplyError(errors.New("fail"))
-	err := client.Authenticate(&Req{})
+	err := client.Authenticate()
 	assert.Error(t, err)
 }
 

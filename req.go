@@ -2,8 +2,6 @@ package nxos
 
 import (
 	"net/http"
-	neturl "net/url"
-	"strings"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -85,26 +83,5 @@ func Query(k, v string) func(req *Req) {
 		q := req.HttpReq.URL.Query()
 		q.Add(k, v)
 		req.HttpReq.URL.RawQuery = q.Encode()
-	}
-}
-
-// OverrideUrl uses another url instead of the one when the client was created
-func OverrideUrl(url string) func(req *Req) {
-	return func(req *Req) {
-		oldUrl := req.HttpReq.URL.String()
-		newUrl := ""
-		i := 0
-		for m := 1; m <= 3; m++ {
-			x := strings.Index(oldUrl[i:], "/")
-			if x < 0 {
-				break
-			}
-			i += x + 1
-			if m == 3 {
-				newUrl = oldUrl[(i - 1):]
-			}
-		}
-		req.HttpReq.URL, _ = neturl.Parse(url + newUrl)
-		req.OverrideUrl = url
 	}
 }

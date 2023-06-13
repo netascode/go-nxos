@@ -23,16 +23,6 @@ const DefaultBackoffMinDelay int = 4
 const DefaultBackoffMaxDelay int = 60
 const DefaultBackoffDelayFactor float64 = 3
 
-// ClientUrl stores URL specific parameters
-type ClientUrl struct {
-	// Url is the NXOS device IP or hostname, e.g. https://10.0.0.1:443 (port is optional).
-	Url string
-	// LastRefresh is the timestamp of the last token refresh interval.
-	LastRefresh time.Time
-	// Token is the current authentication token
-	Token string
-}
-
 // Client is an HTTP NXOS NX-API client.
 // Use nxos.NewClient to initiate a client.
 // This will ensure proper cookie handling and processing of modifiers.
@@ -40,7 +30,11 @@ type Client struct {
 	// HttpClient is the *http.Client used for API requests.
 	HttpClient *http.Client
 	// List of URLs.
-	Urls []ClientUrl
+	Url string
+	// LastRefresh is the timestamp of the last token refresh interval.
+	LastRefresh time.Time
+	// Token is the current authentication token
+	Token string
 	// Usr is the NXOS device username.
 	Usr string
 	// Pwd is the NXOS device password.
@@ -73,12 +67,9 @@ func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (Clie
 		Jar:       cookieJar,
 	}
 
-	url1 := ClientUrl{
-		Url: url,
-	}
-
 	client := Client{
 		HttpClient:         &httpClient,
+		Url:                url,
 		Usr:                usr,
 		Pwd:                pwd,
 		Insecure:           insecure,
@@ -87,8 +78,6 @@ func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (Clie
 		BackoffMaxDelay:    DefaultBackoffMaxDelay,
 		BackoffDelayFactor: DefaultBackoffDelayFactor,
 	}
-
-	client.Urls = append(client.Urls, url1)
 
 	for _, mod := range mods {
 		mod(&client)
@@ -133,7 +122,7 @@ func BackoffDelayFactor(x float64) func(*Client) {
 
 // NewReq creates a new Req request for this client.
 func (client Client) NewReq(method, uri string, body io.Reader, mods ...func(*Req)) Req {
-	httpReq, _ := http.NewRequest(method, client.Urls[0].Url+uri+".json", body)
+	httpReq, _ := http.NewRequest(method, client.Url+uri+".json", body)
 	req := Req{
 		HttpReq:    httpReq,
 		Refresh:    true,
@@ -238,7 +227,7 @@ func (client *Client) Do(req Req) (Res, error) {
 //	}
 func (client *Client) Get(path string, mods ...func(*Req)) (Res, error) {
 	req := client.NewReq("GET", path, nil, mods...)
-	client.Authenticate(&req)
+	client.Authenticate()
 	return client.Do(req)
 }
 
@@ -285,7 +274,7 @@ func (client *Client) GetDn(dn string, mods ...func(*Req)) (Res, error) {
 // DeleteDn makes a DELETE request by DN.
 func (client *Client) DeleteDn(dn string, mods ...func(*Req)) (Res, error) {
 	req := client.NewReq("DELETE", fmt.Sprintf("/api/mo/%s", dn), nil, mods...)
-	client.Authenticate(&req)
+	client.Authenticate()
 	return client.Do(req)
 }
 
@@ -293,7 +282,7 @@ func (client *Client) DeleteDn(dn string, mods ...func(*Req)) (Res, error) {
 // Hint: Use the Body struct to easily create POST body data.
 func (client *Client) Post(dn, data string, mods ...func(*Req)) (Res, error) {
 	req := client.NewReq("POST", fmt.Sprintf("/api/mo/%s", dn), strings.NewReader(data), mods...)
-	client.Authenticate(&req)
+	client.Authenticate()
 	return client.Do(req)
 }
 
@@ -301,23 +290,23 @@ func (client *Client) Post(dn, data string, mods ...func(*Req)) (Res, error) {
 // Hint: Use the Body struct to easily create PUT body data.
 func (client *Client) Put(dn, data string, mods ...func(*Req)) (Res, error) {
 	req := client.NewReq("PUT", fmt.Sprintf("/api/mo/%s", dn), strings.NewReader(data), mods...)
-	client.Authenticate(&req)
+	client.Authenticate()
 	return client.Do(req)
 }
 
 // Login authenticates to the NXOS device.
-func (client *Client) Login(url *ClientUrl) error {
+func (client *Client) Login() error {
 	data := fmt.Sprintf(`{"aaaUser":{"attributes":{"name":"%s","pwd":"%s"}}}`,
 		client.Usr,
 		client.Pwd,
 	)
-	req := client.NewReq("POST", "/api/aaaLogin", strings.NewReader(data), NoRefresh, NoLogPayload, OverrideUrl(url.Url))
+	req := client.NewReq("POST", "/api/aaaLogin", strings.NewReader(data), NoRefresh, NoLogPayload)
 	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}
-	url.Token = res.Get("imdata.0.aaaLogin.attributes.token").Str
-	url.LastRefresh = time.Now()
+	client.Token = res.Get("imdata.0.aaaLogin.attributes.token").Str
+	client.LastRefresh = time.Now()
 	return nil
 }
 
@@ -325,40 +314,22 @@ func (client *Client) Login(url *ClientUrl) error {
 // Note that this will be handled automatically be default.
 // Refresh will be checked every request and the token will be refreshed after 8 minutes.
 // Pass nxos.NoRefresh to prevent automatic refresh handling and handle it directly instead.
-func (client *Client) Refresh(url *ClientUrl) error {
-	res, err := client.Get("/api/aaaRefresh", NoRefresh, NoLogPayload, OverrideUrl(url.Url))
+func (client *Client) Refresh() error {
+	res, err := client.Get("/api/aaaRefresh", NoRefresh, NoLogPayload)
 	if err != nil {
 		return err
 	}
-	url.Token = res.Get("imdata.0.aaaRefresh.attributes.token").Str
-	url.LastRefresh = time.Now()
+	client.Token = res.Get("imdata.0.aaaRefresh.attributes.token").Str
+	client.LastRefresh = time.Now()
 	return nil
 }
 
-// urlLookup is a helper to find a url or create it
-func (client *Client) urlLookup(url string) *ClientUrl {
-	for _, u := range client.Urls {
-		if u.Url == url {
-			return &u
-		}
-	}
-	c := ClientUrl{Url: url}
-	client.Urls = append(client.Urls, c)
-	return &c
-}
-
 // Login if no token available or refresh the token if older than 480 seconds.
-func (client *Client) Authenticate(req *Req) error {
-	var u *ClientUrl
-	if req.OverrideUrl != "" {
-		u = client.urlLookup(req.OverrideUrl)
-	} else {
-		u = &(client.Urls[0])
-	}
-	if u.Token == "" {
-		return client.Login(u)
-	} else if time.Since(u.LastRefresh) > 480*time.Second {
-		return client.Refresh(u)
+func (client *Client) Authenticate() error {
+	if client.Token == "" {
+		return client.Login()
+	} else if time.Since(client.LastRefresh) > 480*time.Second {
+		return client.Refresh()
 	} else {
 		return nil
 	}

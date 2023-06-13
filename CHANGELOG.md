@@ -1,3 +1,7 @@
+## 0.3.0 (unreleased)
+
+- Remove URL override functionality
+
 ## 0.2.5
 
 - Fix issue with override URL and authentication
