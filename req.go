@@ -105,5 +105,6 @@ func OverrideUrl(url string) func(req *Req) {
 			}
 		}
 		req.HttpReq.URL, _ = neturl.Parse(url + newUrl)
+		req.OverrideUrl = url
 	}
 }
