@@ -1,4 +1,4 @@
-## 0.3.1 (unreleased)
+## 0.3.1
 
 - Add support for JSON-RPC requests
 
