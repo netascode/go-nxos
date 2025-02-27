@@ -302,7 +302,6 @@ func (client *Client) JsonRpc(command string, mods ...func(*Req)) (Res, error) {
 	data, _ = sjson.Set(data, "0.params.cmd", command)
 	data, _ = sjson.Set(data, "0.params.version", 1)
 	data, _ = sjson.Set(data, "0.id", 1)
-	fmt.Println(data)
 	req := client.NewReq("POST", "/ins", strings.NewReader(data), mods...)
 	req.HttpReq.Header.Add("Content-Type", "application/json-rpc")
 	req.HttpReq.Header.Add("Cache-Control", "no-cache")

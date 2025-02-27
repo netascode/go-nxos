@@ -1,3 +1,7 @@
+## 0.3.2 (unreleased)
+
+- Remove unused debug output
+
 ## 0.3.1
 
 - Add support for JSON-RPC requests
