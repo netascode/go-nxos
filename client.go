@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 const DefaultMaxRetries int = 3
@@ -291,6 +292,21 @@ func (client *Client) Post(dn, data string, mods ...func(*Req)) (Res, error) {
 func (client *Client) Put(dn, data string, mods ...func(*Req)) (Res, error) {
 	req := client.NewReq("PUT", fmt.Sprintf("/api/mo/%s", dn), strings.NewReader(data), mods...)
 	client.Authenticate()
+	return client.Do(req)
+}
+
+// JsonRpc makes a JSON-RPC request and returns a GJSON result.
+func (client *Client) JsonRpc(command string, mods ...func(*Req)) (Res, error) {
+	data, _ := sjson.Set("[]", "0.jsonrpc", "2.0")
+	data, _ = sjson.Set(data, "0.method", "cli")
+	data, _ = sjson.Set(data, "0.params.cmd", command)
+	data, _ = sjson.Set(data, "0.params.version", 1)
+	data, _ = sjson.Set(data, "0.id", 1)
+	fmt.Println(data)
+	req := client.NewReq("POST", "/ins", strings.NewReader(data), mods...)
+	req.HttpReq.Header.Add("Content-Type", "application/json-rpc")
+	req.HttpReq.Header.Add("Cache-Control", "no-cache")
+	req.HttpReq.SetBasicAuth(client.Usr, client.Pwd)
 	return client.Do(req)
 }
 

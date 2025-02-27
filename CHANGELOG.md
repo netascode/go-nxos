@@ -1,3 +1,7 @@
+## 0.3.1 (unreleased)
+
+- Add support for JSON-RPC requests
+
 ## 0.3.0
 
 - Remove URL override functionality

@@ -251,3 +251,16 @@ func TestClientPut(t *testing.T) {
 	_, err = client.Put("/url", "{}")
 	assert.Error(t, err)
 }
+
+// TestClientJsonRpc tests the Client::JsonRpc method.
+func TestClientJsonRpc(t *testing.T) {
+	defer gock.Off()
+	client := testClient()
+
+	var err error
+
+	// Success
+	gock.New(testURL).Post("/ins").Reply(200)
+	_, err = client.JsonRpc("copy run start")
+	assert.NoError(t, err)
+}
