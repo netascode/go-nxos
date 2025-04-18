@@ -1,3 +1,7 @@
+## 0.3.3 (unrelease)
+
+- Honor proxy settings (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` environment variables)
+
 ## 0.3.2
 
 - Remove unused debug output
