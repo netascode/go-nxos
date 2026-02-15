@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
@@ -150,13 +149,13 @@ func (client *Client) Do(req Req) (Res, error) {
 	// retain the request body across multiple attempts
 	var body []byte
 	if req.HttpReq.Body != nil {
-		body, _ = ioutil.ReadAll(req.HttpReq.Body)
+		body, _ = io.ReadAll(req.HttpReq.Body)
 	}
 
 	var res Res
 
 	for attempts := 0; ; attempts++ {
-		req.HttpReq.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+		req.HttpReq.Body = io.NopCloser(bytes.NewBuffer(body))
 		if req.LogPayload {
 			log.Printf("[DEBUG] HTTP Request: %s, %s, %s", req.HttpReq.Method, req.HttpReq.URL, req.HttpReq.Body)
 		} else {
@@ -175,7 +174,7 @@ func (client *Client) Do(req Req) (Res, error) {
 			}
 		}
 
-		bodyBytes, err := ioutil.ReadAll(httpRes.Body)
+		bodyBytes, err := io.ReadAll(httpRes.Body)
 		httpRes.Body.Close()
 		if err != nil {
 			if ok := client.Backoff(attempts); !ok {
