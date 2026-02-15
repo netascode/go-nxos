@@ -16,7 +16,7 @@ const (
 	testURL = "https://10.0.0.1"
 )
 
-func testClient() Client {
+func testClient() *Client {
 	client, _ := NewClient(testURL, "usr", "pwd", true, MaxRetries(0))
 	client.LastRefresh = time.Now()
 	gock.InterceptClient(client.HttpClient)
