@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -50,6 +51,8 @@ type Client struct {
 	BackoffMaxDelay int
 	// Backoff delay factor
 	BackoffDelayFactor float64
+	// Mutex for authentication token refresh
+	authMutex sync.Mutex
 }
 
 // NewClient creates a new NXOS HTTP client.
@@ -344,6 +347,8 @@ func (client *Client) Refresh() error {
 
 // Login if no token available or refresh the token if older than 480 seconds.
 func (client *Client) Authenticate() error {
+	client.authMutex.Lock()
+	defer client.authMutex.Unlock()
 	if client.Token == "" {
 		return client.Login()
 	} else if time.Since(client.LastRefresh) > 480*time.Second {
