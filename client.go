@@ -58,7 +58,7 @@ type Client struct {
 // Pass modifiers in to modify the behavior of the client, e.g.
 //
 //	client, _ := NewClient("apic", "user", "password", true, RequestTimeout(120))
-func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (Client, error) {
+func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (*Client, error) {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: insecure,
@@ -73,7 +73,7 @@ func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (Clie
 		Jar:       cookieJar,
 	}
 
-	client := Client{
+	client := &Client{
 		HttpClient:         &httpClient,
 		Url:                url,
 		Usr:                usr,
@@ -86,7 +86,7 @@ func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (Clie
 	}
 
 	for _, mod := range mods {
-		mod(&client)
+		mod(client)
 	}
 	return client, nil
 }
@@ -127,7 +127,7 @@ func BackoffDelayFactor(x float64) func(*Client) {
 }
 
 // NewReq creates a new Req request for this client.
-func (client Client) NewReq(method, uri string, body io.Reader, mods ...func(*Req)) Req {
+func (client *Client) NewReq(method, uri string, body io.Reader, mods ...func(*Req)) Req {
 	httpReq, _ := http.NewRequest(method, client.Url+uri+".json", body)
 	req := Req{
 		HttpReq:    httpReq,
