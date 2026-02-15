@@ -175,8 +175,8 @@ func (client *Client) Do(req Req) (Res, error) {
 			}
 		}
 
-		defer httpRes.Body.Close()
 		bodyBytes, err := ioutil.ReadAll(httpRes.Body)
+		httpRes.Body.Close()
 		if err != nil {
 			if ok := client.Backoff(attempts); !ok {
 				log.Printf("[ERROR] Cannot decode response body: %+v", err)
