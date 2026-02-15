@@ -1,3 +1,10 @@
+## Unreleased
+
+- BREAKING CHANGE: `NewClient` now returns `*Client` instead of `Client`
+- Add mutex to `Authenticate` to prevent token refresh race conditions under concurrent use
+- Increase `MaxIdleConnsPerHost` to 32 to improve connection reuse
+- Enable TLS session ticket caching
+
 ## 0.3.3
 
 - Honor proxy settings (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` environment variables)
