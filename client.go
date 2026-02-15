@@ -58,7 +58,11 @@ type Client struct {
 //	client, _ := NewClient("apic", "user", "password", true, RequestTimeout(120))
 func NewClient(url, usr, pwd string, insecure bool, mods ...func(*Client)) (Client, error) {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecure}
+	tr.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: insecure,
+		ClientSessionCache: tls.NewLRUClientSessionCache(0),
+	}
+	tr.MaxIdleConnsPerHost = 32
 
 	cookieJar, _ := cookiejar.New(nil)
 	httpClient := http.Client{
