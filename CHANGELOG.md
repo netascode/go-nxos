@@ -1,4 +1,4 @@
-## Unreleased
+## 0.4.0
 
 - BREAKING CHANGE: `NewClient` now returns `*Client` instead of `Client`
 - Add mutex to `Authenticate` to prevent token refresh race conditions under concurrent use
