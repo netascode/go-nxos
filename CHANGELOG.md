@@ -1,3 +1,7 @@
+## Unreleased
+
+- BREAKING CHANGE: `JsonRpc` now accepts `[]string` instead of `string` to support multiple commands in a single request
+
 ## 0.4.0
 
 - BREAKING CHANGE: `NewClient` now returns `*Client` instead of `Client`

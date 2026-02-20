@@ -300,13 +300,17 @@ func (client *Client) Put(dn, data string, mods ...func(*Req)) (Res, error) {
 	return client.Do(req)
 }
 
-// JsonRpc makes a JSON-RPC request and returns a GJSON result.
-func (client *Client) JsonRpc(command string, mods ...func(*Req)) (Res, error) {
-	data, _ := sjson.Set("[]", "0.jsonrpc", "2.0")
-	data, _ = sjson.Set(data, "0.method", "cli")
-	data, _ = sjson.Set(data, "0.params.cmd", command)
-	data, _ = sjson.Set(data, "0.params.version", 1)
-	data, _ = sjson.Set(data, "0.id", 1)
+// JsonRpc makes a JSON-RPC request with one or more commands and returns a GJSON result.
+func (client *Client) JsonRpc(commands []string, mods ...func(*Req)) (Res, error) {
+	data := "[]"
+	for i, cmd := range commands {
+		prefix := fmt.Sprintf("%d", i)
+		data, _ = sjson.Set(data, prefix+".jsonrpc", "2.0")
+		data, _ = sjson.Set(data, prefix+".method", "cli")
+		data, _ = sjson.Set(data, prefix+".params.cmd", cmd)
+		data, _ = sjson.Set(data, prefix+".params.version", 1)
+		data, _ = sjson.Set(data, prefix+".id", i+1)
+	}
 	req := client.NewReq("POST", "/ins", strings.NewReader(data), mods...)
 	req.HttpReq.Header.Add("Content-Type", "application/json-rpc")
 	req.HttpReq.Header.Add("Cache-Control", "no-cache")

@@ -259,8 +259,13 @@ func TestClientJsonRpc(t *testing.T) {
 
 	var err error
 
-	// Success
+	// Single command
 	gock.New(testURL).Post("/ins").Reply(200)
-	_, err = client.JsonRpc("copy run start")
+	_, err = client.JsonRpc([]string{"copy run start"})
+	assert.NoError(t, err)
+
+	// Multiple commands
+	gock.New(testURL).Post("/ins").Reply(200)
+	_, err = client.JsonRpc([]string{"conf t", "interface loopback1", "no shut"})
 	assert.NoError(t, err)
 }
