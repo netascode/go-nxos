@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.1
 
 - Pretty-print JSON in HTTP request and response debug logs
 
