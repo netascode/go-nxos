@@ -1,3 +1,7 @@
+## Unreleased
+
+- Pretty-print JSON in HTTP request and response debug logs
+
 ## 0.5.0
 
 - BREAKING CHANGE: `JsonRpc` now accepts `[]string` instead of `string` to support multiple commands in a single request

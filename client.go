@@ -157,7 +157,7 @@ func (client *Client) Do(req Req) (Res, error) {
 	for attempts := 0; ; attempts++ {
 		req.HttpReq.Body = io.NopCloser(bytes.NewBuffer(body))
 		if req.LogPayload {
-			log.Printf("[DEBUG] HTTP Request: %s, %s, %s", req.HttpReq.Method, req.HttpReq.URL, req.HttpReq.Body)
+			log.Printf("[DEBUG] HTTP Request: %s, %s, %s", req.HttpReq.Method, req.HttpReq.URL, gjson.Parse(string(body)).Get("@pretty"))
 		} else {
 			log.Printf("[DEBUG] HTTP Request: %s, %s", req.HttpReq.Method, req.HttpReq.URL)
 		}
@@ -188,7 +188,7 @@ func (client *Client) Do(req Req) (Res, error) {
 		}
 		res = Res(gjson.ParseBytes(bodyBytes))
 		if req.LogPayload {
-			log.Printf("[DEBUG] HTTP Response: %s", res.Raw)
+			log.Printf("[DEBUG] HTTP Response: %s", gjson.Parse(res.Raw).Get("@pretty"))
 		}
 
 		if (httpRes.StatusCode < 500 || httpRes.StatusCode > 504) && httpRes.StatusCode != 405 {
