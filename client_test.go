@@ -56,6 +56,40 @@ func TestClientLogin(t *testing.T) {
 		Reply(200).
 		BodyString(Body{}.Set("imdata.0.error.attributes.code", "123").Str)
 	assert.Error(t, client.Login())
+
+	// HTTP 401 returns AuthenticationError
+	gock.New(testURL).Post("/api/aaaLogin.json").Reply(401)
+	err := client.Login()
+	assert.Error(t, err)
+	var authErr *AuthenticationError
+	assert.True(t, errors.As(err, &authErr))
+	assert.Equal(t, 401, authErr.StatusCode)
+
+	// HTTP 403 returns AuthenticationError
+	gock.New(testURL).Post("/api/aaaLogin.json").Reply(403)
+	err = client.Login()
+	assert.Error(t, err)
+	assert.True(t, errors.As(err, &authErr))
+	assert.Equal(t, 403, authErr.StatusCode)
+
+	// HTTP 401 with error message in body
+	gock.New(testURL).
+		Post("/api/aaaLogin.json").
+		Reply(401).
+		BodyString(Body{}.Set("imdata.0.error.attributes.text", "Invalid credentials").Str)
+	err = client.Login()
+	assert.Error(t, err)
+	assert.True(t, errors.As(err, &authErr))
+	assert.Equal(t, 401, authErr.StatusCode)
+	assert.Equal(t, "Invalid credentials", authErr.Message)
+
+	// Network error does NOT return AuthenticationError
+	gock.New(testURL).
+		Post("/api/aaaLogin.json").
+		ReplyError(errors.New("dial tcp: connection refused"))
+	err = client.Login()
+	assert.Error(t, err)
+	assert.False(t, errors.As(err, &authErr))
 }
 
 // TestClientRefresh tests the Client::Refresh method.

@@ -19,6 +19,17 @@ import (
 	"github.com/tidwall/sjson"
 )
 
+// AuthenticationError indicates that the device was reachable but
+// rejected the supplied credentials (HTTP 401/403).
+type AuthenticationError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *AuthenticationError) Error() string {
+	return fmt.Sprintf("authentication failed (HTTP %d): %s", e.StatusCode, e.Message)
+}
+
 const DefaultMaxRetries int = 3
 const DefaultBackoffMinDelay int = 4
 const DefaultBackoffMaxDelay int = 60
@@ -325,10 +336,39 @@ func (client *Client) Login() error {
 		client.Pwd,
 	)
 	req := client.NewReq("POST", "/api/aaaLogin", strings.NewReader(data), NoRefresh, NoLogPayload)
-	res, err := client.Do(req)
+
+	httpRes, err := client.HttpClient.Do(req.HttpReq)
 	if err != nil {
 		return err
 	}
+
+	defer httpRes.Body.Close()
+	bodyBytes, err := io.ReadAll(httpRes.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read login response body: %w", err)
+	}
+	res := Res(gjson.ParseBytes(bodyBytes))
+
+	if httpRes.StatusCode == 401 || httpRes.StatusCode == 403 {
+		errMsg := res.Get("imdata.0.error.attributes.text").Str
+		if errMsg == "" {
+			errMsg = fmt.Sprintf("HTTP %d", httpRes.StatusCode)
+		}
+		return &AuthenticationError{
+			StatusCode: httpRes.StatusCode,
+			Message:    errMsg,
+		}
+	}
+
+	if httpRes.StatusCode < 200 || httpRes.StatusCode >= 300 {
+		return fmt.Errorf("login request failed: HTTP %d", httpRes.StatusCode)
+	}
+
+	errCode := res.Get("imdata.0.error.attributes.code").Str
+	if errCode != "" {
+		return fmt.Errorf("login error: %s", res.Raw)
+	}
+
 	client.Token = res.Get("imdata.0.aaaLogin.attributes.token").Str
 	client.LastRefresh = time.Now()
 	return nil

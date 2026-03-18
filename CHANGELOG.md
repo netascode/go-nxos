@@ -1,3 +1,8 @@
+## Unreleased
+
+- Add `AuthenticationError` type to distinguish authentication failures (HTTP 401/403) from network errors
+- Rework `Login()` to make direct HTTP requests instead of using `Do()`, enabling fast-fail without retries
+
 ## 0.5.1
 
 - Pretty-print JSON in HTTP request and response debug logs
