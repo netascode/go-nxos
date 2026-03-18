@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.2
 
 - Add `AuthenticationError` type to distinguish authentication failures (HTTP 401/403) from network errors
 - Rework `Login()` to make direct HTTP requests instead of using `Do()`, enabling fast-fail without retries
