@@ -1,3 +1,8 @@
+## 0.6.0 (unreleased)
+
+- Add `Client.Version()` to retrieve and cache the NX-OS software version of a device
+- Add `Version` type with `ParseVersion`, `MustParseVersion`, `Compare` and `AtLeast` helpers to parse and compare NX-OS versions
+
 ## 0.5.2
 
 - Add `AuthenticationError` type to distinguish authentication failures (HTTP 401/403) from network errors

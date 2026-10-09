@@ -63,6 +63,10 @@ type Client struct {
 	BackoffDelayFactor float64
 	// Mutex for authentication token refresh
 	authMutex sync.Mutex
+	// Cached device software version
+	version *Version
+	// Mutex for software version retrieval
+	versionMutex sync.Mutex
 }
 
 // NewClient creates a new NXOS HTTP client.

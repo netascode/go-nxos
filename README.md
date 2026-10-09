@@ -58,6 +58,18 @@ res, _ := client.GetClass("l1PhysIf")
 res, _ := client.DeleteDn("sys/userext/user-[testuser]")
 ```
 
+#### Device software version
+
+The NX-OS version is retrieved from `sys/showversion` on first use and cached for the lifetime of the client:
+
+```go
+v, _ := client.Version()
+println(v.String()) // e.g. "10.6(4)"
+if v.AtLeast(nxos.MustParseVersion("10.6(1)")) {
+    // use features introduced in 10.6(1)
+}
+```
+
 #### Query parameters
 
 Pass the `nxos.Query` object to the `Get` request to add query parameters:
