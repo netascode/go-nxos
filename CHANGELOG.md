@@ -1,4 +1,4 @@
-## 0.6.0 (unreleased)
+## 0.6.0
 
 - Add `Client.Version()` to retrieve and cache the NX-OS software version of a device
 - Add `Version` type with `ParseVersion`, `MustParseVersion`, `Compare` and `AtLeast` helpers to parse and compare NX-OS versions
