@@ -35,6 +35,11 @@ const DefaultBackoffMinDelay int = 4
 const DefaultBackoffMaxDelay int = 60
 const DefaultBackoffDelayFactor float64 = 3
 
+// frequentInvocationMinDelay is the minimum delay before retrying a request that was rejected
+// because the same command was invoked too frequently (e.g. MACsec status changes, which
+// NX-OS only accepts every 30 seconds).
+var frequentInvocationMinDelay = 30 * time.Second
+
 // Client is an HTTP NXOS NX-API client.
 // Use nxos.NewClient to initiate a client.
 // This will ensure proper cookie handling and processing of modifiers.
@@ -207,6 +212,12 @@ func (client *Client) Do(req Req) (Res, error) {
 		}
 
 		if (httpRes.StatusCode < 500 || httpRes.StatusCode > 504) && httpRes.StatusCode != 405 {
+			if isFrequentInvocationError(res) {
+				if ok := client.backoff(attempts, frequentInvocationMinDelay); ok {
+					log.Printf("[ERROR] Frequent invocation of command, retries: %v", attempts)
+					continue
+				}
+			}
 			log.Printf("[DEBUG] Exit from Do method")
 			break
 		} else {
@@ -405,16 +416,28 @@ func (client *Client) Authenticate() error {
 	}
 }
 
+// isFrequentInvocationError returns true if the device rejected the request because the
+// command was invoked too frequently, in which case the request can be retried after a delay.
+func isFrequentInvocationError(res Res) bool {
+	return res.Get("imdata.0.error.attributes.code").Str != "" &&
+		strings.Contains(res.Get("imdata.0.error.attributes.text").Str, "Frequent invocation of command")
+}
+
 // Backoff waits following an exponential backoff algorithm
 func (client *Client) Backoff(attempts int) bool {
+	return client.backoff(attempts, 0)
+}
+
+// backoff waits following an exponential backoff algorithm, waiting at least minDelay
+func (client *Client) backoff(attempts int, minDelay time.Duration) bool {
 	log.Printf("[DEBUG] Begining backoff method: attempts %v on %v", attempts, client.MaxRetries)
 	if attempts >= client.MaxRetries {
 		log.Printf("[DEBUG] Exit from backoff method with return value false")
 		return false
 	}
 
-	minDelay := time.Duration(client.BackoffMinDelay) * time.Second
-	maxDelay := time.Duration(client.BackoffMaxDelay) * time.Second
+	minDelay = max(minDelay, time.Duration(client.BackoffMinDelay)*time.Second)
+	maxDelay := max(minDelay, time.Duration(client.BackoffMaxDelay)*time.Second)
 
 	min := float64(minDelay)
 	backoff := min * math.Pow(client.BackoffDelayFactor, float64(attempts))

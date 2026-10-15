@@ -252,6 +252,43 @@ func TestClientPost(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// TestClientFrequentInvocationRetry tests that requests rejected due to frequent command invocation are retried.
+func TestClientFrequentInvocationRetry(t *testing.T) {
+	defer gock.Off()
+	defer func(d time.Duration) { frequentInvocationMinDelay = d }(frequentInvocationMinDelay)
+	frequentInvocationMinDelay = 10 * time.Millisecond
+
+	client, _ := NewClient(testURL, "usr", "pwd", true, MaxRetries(1), BackoffMinDelay(0), BackoffMaxDelay(0))
+	client.LastRefresh = time.Now()
+	gock.InterceptClient(client.HttpClient)
+
+	frequentInvocation := Body{}.
+		Set("imdata.0.error.attributes.code", "1").
+		Set("imdata.0.error.attributes.text", "ERROR: Frequent invocation of command.\nPlease allow at least 30 seconds between MACSec status change.").Str
+
+	var err error
+
+	// Success after retry
+	gock.New(testURL).Post("/url.json").Reply(200).BodyString(frequentInvocation)
+	gock.New(testURL).Post("/url.json").Reply(200)
+	_, err = client.Post("/url", "{}")
+	assert.NoError(t, err)
+	assert.True(t, gock.IsDone())
+
+	// Error after retries are exhausted
+	gock.New(testURL).Post("/url.json").Times(2).Reply(200).BodyString(frequentInvocation)
+	_, err = client.Post("/url", "{}")
+	assert.Error(t, err)
+	assert.True(t, gock.IsDone())
+
+	// Other JSON errors are not retried
+	gock.New(testURL).Post("/url.json").Reply(400).BodyString(Body{}.Set("imdata.0.error.attributes.code", "103").Str)
+	gock.New(testURL).Post("/url.json").Reply(200)
+	_, err = client.Post("/url", "{}")
+	assert.Error(t, err)
+	assert.False(t, gock.IsDone())
+}
+
 // TestClientPost tests the Client::Post method.
 func TestClientPut(t *testing.T) {
 	defer gock.Off()

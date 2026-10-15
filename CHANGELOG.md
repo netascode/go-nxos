@@ -1,3 +1,7 @@
+## Unreleased
+
+- Retry requests rejected with "Frequent invocation of command" errors (e.g. MACsec status changes) after waiting at least 30 seconds
+
 ## 0.6.0
 
 - Add `Client.Version()` to retrieve and cache the NX-OS software version of a device
