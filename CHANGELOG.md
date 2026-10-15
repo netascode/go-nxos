@@ -1,4 +1,4 @@
-## Unreleased
+## 0.6.1
 
 - Retry requests rejected with "Frequent invocation of command" errors (e.g. MACsec status changes) after waiting at least 30 seconds
 
